@@ -1,0 +1,49 @@
+@startuml secuencia_matricula
+title Vista de secuencia - Matricular estudiante en un grupo (proceso crítico)
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam sequenceMessageAlign left
+autonumber
+
+actor "Coordinador" as C
+participant "SPA web" as UI
+participant "Balanceador\n(ALB)" as LB
+participant "Filtro seguridad\n(JWT + RBAC)" as SEC
+participant "MatriculaController" as CT
+participant "MatriculaService" as SV
+participant "Gestión académica\n(IAcademicCatalog)" as AC
+participant "AuditService" as AU
+database "PostgreSQL" as DB
+
+C -> UI : Selecciona estudiante y grupo
+UI -> LB : POST /api/v1/matriculas (HTTPS, Bearer JWT)
+LB -> SEC : reenvía solicitud
+SEC -> SEC : valida firma, expiración y rol\n(COORDINADOR o ADMIN)
+alt token inválido o rol no autorizado
+  SEC --> UI : 401 / 403
+end
+SEC -> CT : solicitud autorizada
+CT -> SV : matricular(idEstudiante, idGrupo)
+SV -> AC : validarGrupoYPeriodo(idGrupo)
+AC --> SV : grupo abierto, periodo en matrícula
+SV -> DB : BEGIN TRANSACTION
+SV -> DB : SELECT ... FROM grupo\nWHERE id = :idGrupo FOR UPDATE
+note right of DB : Bloqueo de fila: solicitudes\nsimultáneas al mismo grupo\nesperan su turno
+DB --> SV : cupo_disponible
+SV -> DB : ¿matrícula activa del estudiante en la\nmisma asignatura y periodo?
+DB --> SV : resultado
+alt cupo_disponible = 0 o matrícula duplicada
+  SV -> DB : ROLLBACK
+  SV --> CT : error de regla de negocio
+  CT --> UI : 409 Conflict (sin cupo / duplicada)
+else hay cupo y no hay duplicado
+  SV -> DB : UPDATE grupo SET cupo_disponible = cupo_disponible - 1
+  SV -> DB : INSERT INTO matricula (estado = 'INSCRITA')
+  SV -> AU : registrar(usuario, 'MATRICULA_CREADA', matricula)
+  AU -> DB : INSERT INTO evento_auditoria (misma transacción)
+  SV -> DB : COMMIT (libera el bloqueo)
+  SV --> CT : matrícula creada
+  CT --> UI : 201 Created
+  UI --> C : Confirmación y cupos restantes
+end
+@enduml

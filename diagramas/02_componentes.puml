@@ -1,0 +1,61 @@
+@startuml componentes
+title Vista lógica / componentes - Monolito modular del SGA
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam componentStyle uml2
+skinparam componentBackgroundColor #EAF2FB
+skinparam componentBorderColor #2F5D8A
+skinparam packageBackgroundColor #FAFAFA
+skinparam packageBorderColor #888888
+
+component "Frontend SPA (React)\nresponsive, accesible (WCAG 2.1 AA)" as SPA
+
+package "Backend SGA - monolito modular (Spring Boot)" {
+  component "Capa API REST /api/v1\n(controladores, validación, OpenAPI)" as API
+  component "Filtro de seguridad\n(JWT + RBAC)" as SEC
+
+  package "Módulos (cada uno con capas: aplicación / dominio / persistencia)" {
+    component "IAM\nusuarios, roles,\ntokens" as IAM
+    component "Gestión académica\npersonas, programas, plan,\nasignaturas, periodos,\ngrupos, horarios" as ACA
+    component "Matrículas\ncupos, duplicados,\nbloqueo de fila" as MAT
+    component "Calificaciones\nregistro y publicación" as CAL
+    component "Reportes\nsolo lectura,\nfiltros" as REP
+    component "Auditoría\nbitácora\nappend-only" as AUD
+  }
+}
+
+database "PostgreSQL primario\n(esquema por módulo)" as DB
+database "Réplica de lectura" as RR
+collections "Redis\n(caché + revocación JWT)" as REDIS
+
+SPA --> API : HTTPS / JSON
+API -right-> SEC : cada solicitud
+SEC --> IAM : ISecurityContext
+API --> ACA : delega
+API --> MAT : delega
+API --> CAL : delega
+API --> REP : delega
+
+MAT --> ACA : IAcademicCatalog
+CAL --> MAT : IEnrollmentQuery
+CAL --> ACA : IAcademicCatalog
+MAT --> AUD : IAuditService\n(misma transacción)
+CAL --> AUD : IAuditService\n(misma transacción)
+IAM --> AUD : IAuditService
+ACA --> AUD : IAuditService
+
+IAM ..> REDIS
+ACA ..> REDIS : caché catálogo
+ACA ..> DB
+MAT ..> DB
+CAL ..> DB
+IAM ..> DB
+AUD ..> DB
+REP ..> RR
+
+note right of REP
+ Sin ciclos: Académico <- Matrículas <- Calificaciones.
+ Ningún módulo depende de Reportes.
+ Ningún módulo accede a tablas de otro.
+end note
+@enduml

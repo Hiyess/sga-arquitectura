@@ -1,0 +1,55 @@
+@startuml despliegue
+title Modelo de despliegue - SGA en la nube (AWS de referencia)
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam nodeBackgroundColor #EAF2FB
+skinparam nodeBorderColor #2F5D8A
+
+actor "Usuarios\n(navegador PC / móvil)" as USR
+
+cloud "Borde" {
+  node "CDN + WAF\n(CloudFront + AWS WAF)\nTLS 1.3, HSTS, rate limiting" as CDN
+  node "Almacenamiento estático\n(S3: SPA React)" as S3
+}
+
+node "Región AWS (VPC)" {
+  node "Subred pública" {
+    node "Application Load Balancer\n(health check /api/v1/health)" as ALB
+  }
+  node "Subred privada - Zona A" as AZA {
+    node "Contenedor ECS Fargate\nBackend SGA #1" as APP1
+    database "PostgreSQL primario\n(RDS Multi-AZ)" as DBP
+    node "Redis primario" as R1
+  }
+  node "Subred privada - Zona B" as AZB {
+    node "Contenedor ECS Fargate\nBackend SGA #2\n(autoescala 2..6)" as APP2
+    database "PostgreSQL standby\n(failover automático)" as DBS
+    database "Réplica de lectura\n(Reportes)" as DBR
+    node "Redis réplica" as R2
+  }
+  node "Servicios de soporte" {
+    node "Secrets Manager\n(credenciales, llave JWT)" as SM
+    node "CloudWatch\n(logs, métricas, alarmas)" as CW
+    node "CI/CD\n(GitHub Actions + ECR)" as CI
+  }
+}
+node "Respaldos\nS3 con Object Lock (WORM)\n+ copia en otra región" as BK
+
+USR --> CDN : HTTPS 443
+CDN --> S3 : contenido estático
+CDN --> ALB : HTTPS /api/*
+ALB --> APP1 : HTTPS (SG: solo desde ALB)
+ALB --> APP2 : HTTPS
+APP1 --> DBP : TLS 5432 (SG: solo desde app)
+APP2 --> DBP : TLS 5432
+APP1 --> R1 : TLS 6379
+APP2 --> R1
+DBP --> DBS : replicación síncrona
+DBP --> DBR : replicación asíncrona
+R1 --> R2 : replicación
+APP1 ..> SM
+APP1 ..> CW
+APP2 ..> CW
+CI ..> APP1 : despliegue imagen
+DBP --> BK : snapshots diarios + PITR (WAL)
+@enduml

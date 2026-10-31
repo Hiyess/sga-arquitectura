@@ -1,0 +1,125 @@
+@startuml modelo_datos
+title Modelo de datos conceptual - SGA
+hide circle
+hide methods
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam linetype ortho
+skinparam classBackgroundColor #EAF2FB
+skinparam classBorderColor #2F5D8A
+
+class Usuario {
+  id_usuario <<PK>>
+   correo <<único>>
+   contrasena_hash
+   estado
+}
+class Rol {
+  id_rol <<PK>>
+   nombre
+}
+class UsuarioRol {
+  id_usuario <<FK>>
+   id_rol <<FK>>
+}
+class Estudiante {
+  id_estudiante <<PK>>
+   codigo <<único>>
+   documento <<único>>
+   nombres, apellidos
+   id_programa <<FK>>
+   estado
+}
+class Docente {
+  id_docente <<PK>>
+   codigo <<único>>
+   documento <<único>>
+   nombres, apellidos
+   estado
+}
+class Programa {
+  id_programa <<PK>>
+   codigo <<único>>
+   nombre
+   nivel
+   estado
+}
+class PlanEstudio {
+  id_programa <<FK>>
+   id_asignatura <<FK>>
+   semestre
+}
+class Asignatura {
+  id_asignatura <<PK>>
+   codigo <<único>>
+   nombre
+   creditos
+   estado
+}
+class PeriodoAcademico {
+  id_periodo <<PK>>
+   codigo (2026-2)
+   fechas inicio/fin
+   fechas matrícula
+   estado
+}
+class Grupo {
+  id_grupo <<PK>>
+   id_asignatura <<FK>>
+   id_periodo <<FK>>
+   id_docente <<FK>>
+   cupo_maximo
+   cupo_disponible
+   estado
+}
+class Horario {
+  id_horario <<PK>>
+   dia, hora_inicio, hora_fin
+   aula_o_enlace
+}
+class Matricula {
+  id_matricula <<PK>>
+   id_estudiante <<FK>>
+   id_grupo <<FK>>
+   fecha
+   estado
+}
+class Calificacion {
+  id_calificacion <<PK>>
+   id_matricula <<FK>>
+   descripcion
+   valor_nota
+   publicada
+   registrada_por
+}
+class EventoAuditoria {
+  id_evento <<PK>>
+   id_usuario <<FK>>
+   fecha_hora
+   accion
+   entidad, id_registro
+   valor_anterior, valor_nuevo
+}
+
+Usuario "1" -- "1..*" UsuarioRol
+Rol "1" -- "0..*" UsuarioRol
+Usuario "1" -- "0..1" Estudiante
+Usuario "1" -- "0..1" Docente
+Programa "1" -- "0..*" Estudiante
+Programa "1" -- "1..*" PlanEstudio
+Asignatura "1" -- "1..*" PlanEstudio
+Asignatura "1" -- "0..*" Grupo
+PeriodoAcademico "1" -- "0..*" Grupo
+Docente "0..1" -- "0..*" Grupo
+Grupo "1" -- "0..*" Horario
+Estudiante "1" -- "0..*" Matricula
+Grupo "1" -- "0..*" Matricula
+Matricula "1" -- "0..*" Calificacion
+Usuario "1" -- "0..*" EventoAuditoria
+
+note bottom of Matricula
+ Regla RN-02: un estudiante no puede tener dos
+ matrículas activas en la misma asignatura y periodo.
+ Regla RN-01: matrículas activas <= cupo_maximo.
+end note
+@enduml

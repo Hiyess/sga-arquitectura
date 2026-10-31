@@ -1,0 +1,60 @@
+@startuml casos_de_uso
+title Modelo de casos de uso - Sistema de Gestión Académica (SGA)
+left to right direction
+skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam usecaseBackgroundColor #EAF2FB
+skinparam usecaseBorderColor #2F5D8A
+skinparam actorStyle awesome
+
+actor "Administrador" as A
+actor "Coordinador\nacadémico" as C
+actor "Docente" as D
+actor "Estudiante" as E
+
+rectangle "SGA" {
+  usecase "CU-01 Iniciar / cerrar sesión" as CU01
+  usecase "CU-02 Gestionar usuarios y roles" as CU02
+  usecase "CU-03 Gestionar estudiantes" as CU03
+  usecase "CU-04 Gestionar docentes" as CU04
+  usecase "CU-12 Consultar auditoría" as CU12
+  usecase "CU-05 Gestionar programas,\nplanes y asignaturas" as CU05
+  usecase "CU-06 Configurar periodos,\ngrupos y horarios" as CU06
+  usecase "CU-07 Matricular estudiante" as CU07
+  usecase "CU-10 Generar reportes" as CU10
+  usecase "CU-11 Buscar y filtrar registros" as CU11
+  usecase "CU-08 Registrar / publicar\ncalificaciones" as CU08
+  usecase "CU-09 Consultar asignaturas,\nhorario y notas" as CU09
+  usecase "Validar cupo y\nduplicados" as VAL
+  usecase "Registrar evento\nde auditoría" as AUD
+}
+
+A --> CU01
+A --> CU02
+A --> CU03
+A --> CU04
+A --> CU12
+A --> CU07
+C --> CU01
+C --> CU05
+C --> CU06
+C --> CU07
+C --> CU10
+C --> CU11
+CU01 <-- D
+CU08 <-- D
+CU09 <-- D
+CU01 <-- E
+CU09 <-- E
+
+CU07 ..> VAL : <<include>>
+CU07 ..> AUD : <<include>>
+CU08 ..> AUD : <<include>>
+CU02 ..> AUD : <<include>>
+CU10 ..> CU11 : <<include>>
+note bottom of AUD
+ CU-01 también registra inicios de sesión (RF-12).
+ El Administrador puede ejecutar todo lo del Coordinador.
+end note
+@enduml
