@@ -3,6 +3,9 @@
 Trabajo final de **Arquitectura de Software (54451)**  
 Estudiante: **Yessica Alejandra Carrascal** · Docente: **Alexander Calderón Martínez** · Noviembre de 2026
 
+Video de socialización
+https://www.youtube.com/watch?v=6joazVZA6F4
+
 > Este repositorio contiene una **propuesta de arquitectura** (diseño y modelos). No incluye implementación de código.
 
 ## Resumen de la arquitectura
@@ -30,5 +33,5 @@ Estudiante: **Yessica Alejandra Carrascal** · Docente: **Alexander Calderón Ma
 
 Para regenerar las imágenes: `java -jar plantuml.jar -tpng -charset UTF-8 diagramas/*.puml`
 
-## Video de socialización
-[Pendiente: enlace de YouTube]
+
+
